@@ -8,7 +8,7 @@ env:
   # Artifact Registry host
   REGISTRY: us-central1-docker.pkg.dev
   # GCP Project ID for QA builds only
-  GCP_PROJECT_ID: cursor-demo
+  GCP_PROJECT_ID: cursor-demo-company
   # Generic image name for both QA and PROD environments
   IMAGE_NAME: cursor-demo-docker/tomcat-app
 
