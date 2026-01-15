@@ -53,7 +53,6 @@ jobs:
             --zone ${{ env.GKE_ZONE }} \
             --project cursor-demo-${{ github.event.inputs.environment }}
 
-
       - name: Set up Helm
         uses: azure/setup-helm@v3
         with:
@@ -61,7 +60,7 @@ jobs:
 
       - name: Install cert-manager CRDs
         run: |
-          kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.13.0/cert-manager.crds.yaml || true
+          kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.13.0/cert-manager.crds.yaml
 
       - name: Check if cert-manager is installed
         id: check_cert_manager
@@ -97,8 +96,8 @@ jobs:
 
       - name: Wait for ClusterIssuer to be ready
         run: |
-          kubectl wait --for=condition=ready clusterissuer letsencrypt-prod --timeout=60s || true
-          kubectl wait --for=condition=ready clusterissuer letsencrypt-staging --timeout=60s || true
+          kubectl wait --for=condition=ready clusterissuer letsencrypt-prod --timeout=60s 
+          kubectl wait --for=condition=ready clusterissuer letsencrypt-staging --timeout=60s
 
       - name: Determine image tag
         id: image_tag
@@ -135,7 +134,7 @@ jobs:
         run: |
           echo "Checking certificate status..."
           kubectl get certificate -n ${{ github.event.inputs.environment }}
-          kubectl describe certificate tomcat-app-tls -n ${{ github.event.inputs.environment }} || true
+          kubectl describe certificate tomcat-app-tls -n ${{ github.event.inputs.environment }}
 
       - name: Verify ingress
         run: |
