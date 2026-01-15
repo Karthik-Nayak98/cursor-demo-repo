@@ -12,6 +12,9 @@ env:
   # Generic image name for both QA and PROD environments
   IMAGE_NAME: cursor-demo-docker/tomcat-app
 
+permissions: 
+  id-token: write
+  contents: read
 jobs:
   build-and-test:
     name: Build and Test
