@@ -1,0 +1,40 @@
+# Git files
+.git
+.gitignore
+.github
+
+# IDE files
+.idea
+.vscode
+*.iml
+*.swp
+*.swo
+*~
+
+# Build artifacts (will be built in container)
+target/
+*.war
+*.jar
+
+# Documentation
+*.md
+README.txt
+LICENSE
+
+# CI/CD files
+.github/workflows
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Maven wrapper (not needed in container)
+.mvn/wrapper
+
+# Logs
+*.log
+
+# Temporary files
+tmp/
+temp/
+
