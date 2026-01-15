@@ -58,21 +58,21 @@ jobs:
         with:
           version: '3.13.0'
 
-      - name: Install cert-manager CRDs
-        run: |
-          kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.13.0/cert-manager.crds.yaml
+      # - name: Install cert-manager CRDs
+      #   run: |
+      #     kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.13.0/cert-manager.crds.yaml
 
-      - name: Check if cert-manager is installed
-        id: check_cert_manager
-        run: |
-          if kubectl get namespace cert-manager 2>/dev/null; then
-            echo "installed=true" >> $GITHUB_OUTPUT
-          else
-            echo "installed=false" >> $GITHUB_OUTPUT
-          fi
+      # - name: Check if cert-manager is installed
+      #   id: check_cert_manager
+      #   run: |
+      #     if kubectl get namespace cert-manager 2>/dev/null; then
+      #       echo "installed=true" >> $GITHUB_OUTPUT
+      #     else
+      #       echo "installed=false" >> $GITHUB_OUTPUT
+      #     fi
 
       - name: Install cert-manager
-        if: steps.check_cert_manager.outputs.installed == 'false'
+        # if: steps.check_cert_manager.outputs.installed == 'false'
         run: |
           helm repo add jetstack https://charts.jetstack.io
           helm repo update
@@ -83,7 +83,7 @@ jobs:
             --set installCRDs=true
 
       - name: Wait for cert-manager to be ready
-        if: steps.check_cert_manager.outputs.installed == 'false'
+        # if: steps.check_cert_manager.outputs.installed == 'false'
         run: |
           kubectl wait --for=condition=ready pod \
             --all -n cert-manager \
