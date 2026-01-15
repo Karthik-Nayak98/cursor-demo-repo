@@ -1,0 +1,142 @@
+name: Deploy to Kubernetes
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy to'
+        required: true
+        type: choice
+        options:
+          - qa
+          - prod
+      image_tag:
+        description: 'Docker image tag to deploy'
+        required: false
+        default: 'latest'
+
+env:
+  REGISTRY: us-central1-docker.pkg.dev
+  GCP_PROJECT_ID: cursor-demo-company 
+  IMAGE_NAME: cursor-demo-docker/tomcat-app
+  GKE_ZONE: us-central1-a 
+
+jobs:
+  deploy:
+    name: Deploy to ${{ github.event.inputs.environment }}
+    runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.environment }}
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: "projects/125899941801/locations/global/workloadIdentityPools/cursor-demo/providers/github-oidc"
+          service_account: github-wlf@cursor-demo-qa.iam.gserviceaccount.com
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Configure kubectl
+        run: |
+          gcloud container clusters get-credentials  cursor-demo-${{ github.event.inputs.environment }}-${{ github.event.inputs.environment }}gke\
+            --zone ${{ env.GKE_ZONE }} \
+            --project cursor-demo-${{ github.event.inputs.environment }}
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v3
+        with:
+          version: '3.13.0'
+
+      - name: Install cert-manager CRDs
+        run: |
+          kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.13.0/cert-manager.crds.yaml || true
+
+      - name: Check if cert-manager is installed
+        id: check_cert_manager
+        run: |
+          if kubectl get namespace cert-manager 2>/dev/null; then
+            echo "installed=true" >> $GITHUB_OUTPUT
+          else
+            echo "installed=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Install cert-manager
+        if: steps.check_cert_manager.outputs.installed == 'false'
+        run: |
+          helm repo add jetstack https://charts.jetstack.io
+          helm repo update
+          helm install cert-manager jetstack/cert-manager \
+            --namespace cert-manager \
+            --create-namespace \
+            --version v1.13.0 \
+            --set installCRDs=true
+
+      - name: Wait for cert-manager to be ready
+        if: steps.check_cert_manager.outputs.installed == 'false'
+        run: |
+          kubectl wait --for=condition=ready pod \
+            --all -n cert-manager \
+            --timeout=300s
+
+      - name: Apply ClusterIssuer
+        run: |
+          # Replace email in cluster-issuer.yaml
+          kubectl apply -f cluster-issuer.yaml 
+
+      - name: Wait for ClusterIssuer to be ready
+        run: |
+          kubectl wait --for=condition=ready clusterissuer letsencrypt-prod --timeout=60s || true
+          kubectl wait --for=condition=ready clusterissuer letsencrypt-staging --timeout=60s || true
+
+      - name: Determine image tag
+        id: image_tag
+        run: |
+          if [ -n "${{ github.event.inputs.image_tag }}" ]; then
+            echo "tag=${{ github.event.inputs.image_tag }}" >> $GITHUB_OUTPUT
+          else
+            echo "tag=${{ github.sha }}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Configure Docker for Artifact Registry
+        run: |
+          gcloud auth configure-docker ${{ env.REGISTRY }} --quiet
+
+      - name: Deploy with Helm
+        run: |
+          helm upgrade --install tomcat-app helm/tomcat-app/ \
+            --namespace ${{ github.event.inputs.environment }} \
+            --create-namespace \
+            --set image.repository=${{ env.REGISTRY }}/${{ env.GCP_PROJECT_ID }}/${{ env.IMAGE_NAME }} \
+            --set image.tag=${{ steps.image_tag.outputs.tag }} \
+            --set ingress.hosts[0].host=${{ secrets.INGRESS_HOST }} \
+            --set ingress.tls[0].hosts[0]=${{ secrets.INGRESS_HOST }} \
+            --set ingress.tls[0].secretName=tomcat-app-tls \
+            --wait \
+            --timeout 5m
+
+      - name: Verify deployment
+        run: |
+          kubectl rollout status deployment/tomcat-app -n ${{ github.event.inputs.environment }} --timeout=5m
+          kubectl get pods -n ${{ github.event.inputs.environment }} -l app.kubernetes.io/name=tomcat-app
+
+      - name: Check certificate status
+        run: |
+          echo "Checking certificate status..."
+          kubectl get certificate -n ${{ github.event.inputs.environment }}
+          kubectl describe certificate tomcat-app-tls -n ${{ github.event.inputs.environment }} || true
+
+      - name: Verify ingress
+        run: |
+          kubectl get ingress -n ${{ github.event.inputs.environment }}
+          INGRESS_IP=$(kubectl get ingress -n ${{ github.event.inputs.environment }} -o jsonpath='{.items[0].status.loadBalancer.ingress[0].ip}' || echo "")
+          if [ -n "$INGRESS_IP" ]; then
+            echo "Ingress IP: $INGRESS_IP"
+          else
+            echo "Ingress IP not yet assigned"
+          fi
+
+
