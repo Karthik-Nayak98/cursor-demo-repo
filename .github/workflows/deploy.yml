@@ -117,7 +117,7 @@ jobs:
             --set image.tag=${{ steps.image_tag.outputs.tag }} \
             --set ingress.hosts[0].host=tomcat-app.${{ github.event.inputs.environment }}.example.com \
             --set ingress.hosts[0].paths[0].path=/ \
-            --set ingress.hosts[0].paths[0].pathType=Prefix
+            --set ingress.hosts[0].paths[0].pathType=Prefix \
             --set ingress.tls[0].hosts[0]=tomcat-app.${{ github.event.inputs.environment }}.example.com \
             --set ingress.tls[0].secretName=tomcat-app-tls \
             --wait \
