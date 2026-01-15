@@ -1,0 +1,17 @@
+apiVersion: v2
+name: tomcat-app
+description: A Helm chart for Tomcat servlet application
+type: application
+version: 0.1.0
+appVersion: "1.0-SNAPSHOT"
+keywords:
+  - tomcat
+  - servlet
+  - java
+  - webapp
+maintainers:
+  - name: DevOps Team
+home: https://github.com/your-org/your-repo
+sources:
+  - https://github.com/your-org/your-repo
+
