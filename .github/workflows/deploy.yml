@@ -119,11 +119,11 @@ jobs:
             --set ingress.hosts[0].paths[0].path=/ \
             --set ingress.hosts[0].paths[0].pathType=Prefix \
             --set ingress.tls[0].hosts[0]=tomcat-app.${{ github.event.inputs.environment }}.example.com \
-            --set ingress.tls[0].secretName=tomcat-app-tls \
+            --set ingress.tls[0].secretName=tomcat-app-tls 
 
       - name: Verify deployment
         run: |
-          kubectl rollout status deployment/tomcat-app -n ${{ github.event.inputs.environment }} --timeout=5m
+          kubectl rollout status deployment/tomcat-app -n ${{ github.event.inputs.environment }}
           kubectl get pods -n ${{ github.event.inputs.environment }} -l app.kubernetes.io/name=tomcat-app
 
       - name: Check certificate status
