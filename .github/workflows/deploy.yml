@@ -58,6 +58,25 @@ jobs:
         with:
           version: '3.13.0'
 
+      - name: Check if nginx ingress controller is installed
+        id: check_nginx_ingress
+        run: |
+          if kubectl get ns ingress-nginx 2>/dev/null; then
+            echo "installed=true" >> $GITHUB_OUTPUT
+          else
+            echo "installed=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Install nginx ingress controller
+        if: steps.check_nginx_ingress.outputs.installed == 'false'
+        run: |
+          helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx
+          helm repo update
+          helm install ingress-nginx ingress-nginx/ingress-nginx \
+            --namespace ingress-nginx \
+            --create-namespace \
+            --set controller.publishService.enabled=true
+
       - name: Check if cert-manager is installed
         id: check_cert_manager
         run: |
