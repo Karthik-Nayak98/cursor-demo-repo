@@ -127,6 +127,30 @@ jobs:
         run: |
           gcloud auth configure-docker ${{ env.REGISTRY }} --quiet
 
+      - name: Get Ingress IP
+        id: get_ingress_ip
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          # Wait up to 10 minutes (60 x 10s) for the LoadBalancer IP to be assigned.
+          for i in {1..60}; do
+            IP="$(kubectl get svc ingress-nginx-controller -n ingress-nginx \
+              -o jsonpath='{.status.loadBalancer.ingress[0].ip}' 2>/dev/null || true)"
+
+            if [ -n "${IP}" ]; then
+              echo "ip=${IP}" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+
+            echo "Waiting for ingress-nginx-controller external IP... (${i}/60)"
+            sleep 10
+          done
+
+          echo "Timed out waiting for ingress-nginx-controller external IP"
+          kubectl get svc -n ingress-nginx
+          exit 1
+        
       - name: Deploy with Helm
         run: |
           helm upgrade --install tomcat-app helm/tomcat-app/ \
@@ -134,10 +158,10 @@ jobs:
             --create-namespace \
             --set image.repository=${{ env.REGISTRY }}/${{ env.GCP_PROJECT_ID }}/${{ env.IMAGE_NAME }} \
             --set image.tag=${{ steps.image_tag.outputs.tag }} \
-            --set ingress.hosts[0].host=tomcat-app-${{ github.event.inputs.environment }}.com \
+            --set ingress.hosts[0].host=tomcat-app-${{ github.event.inputs.environment }}.${{ steps.get_ingress_ip.outputs.ip }}.nip.io \
             --set ingress.hosts[0].paths[0].path=/ \
             --set ingress.hosts[0].paths[0].pathType=Prefix \
-            --set ingress.tls[0].hosts[0]=tomcat-app-${{ github.event.inputs.environment }}.com \
+            --set ingress.tls[0].hosts[0]=tomcat-app-${{ github.event.inputs.environment }}.${{ steps.get_ingress_ip.outputs.ip }}.nip.io \
             --set ingress.tls[0].secretName=tomcat-app-tls 
 
       - name: Verify deployment
