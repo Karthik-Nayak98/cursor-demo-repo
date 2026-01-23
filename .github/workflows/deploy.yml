@@ -98,7 +98,7 @@ jobs:
             --set installCRDs=true
 
       - name: Wait for cert-manager to be ready
-        # if: steps.check_cert_manager.outputs.installed == 'false'
+        if: steps.check_cert_manager.outputs.installed == 'false'
         run: |
           kubectl wait --for=condition=ready pod \
             --all -n cert-manager \
