@@ -68,7 +68,7 @@ jobs:
           fi
 
       - name: Install nginx ingress controller
-        # if: steps.check_nginx_ingress.outputs.installed == 'false'
+        if: steps.check_nginx_ingress.outputs.installed == 'false'
         run: |
           helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx
           helm repo update
