@@ -61,7 +61,7 @@ jobs:
       - name: Check if nginx ingress controller is installed
         id: check_nginx_ingress
         run: |
-          if kubectl get ns ingress-nginx 2>/dev/null; then
+          if kubectl get deployment ingress-nginx-controller -n ingress-nginx 2>/dev/null; then
             echo "installed=true" >> $GITHUB_OUTPUT
           else
             echo "installed=false" >> $GITHUB_OUTPUT
